@@ -1,0 +1,47 @@
+name: build
+on:
+  schedule:
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: build
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.TRACKER_REPO }}
+          ssh-key: ${{ secrets.TRACKER_READ_KEY }}
+          path: src
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: prepare
+        run: pip install --quiet cryptography==44.0.0
+      # このリポジトリの実行記録は誰でも見られるので、中身は出さない（失敗したかどうかだけ）
+      - name: build
+        env:
+          CHATWORK_TOKEN: ${{ secrets.CHATWORK_TOKEN }}
+          BOARD_PW_ATSUMI: ${{ secrets.BOARD_PW_ATSUMI }}
+          BOARD_PW_STAGEON: ${{ secrets.BOARD_PW_STAGEON }}
+        run: |
+          umask 077
+          mkdir -p ~/.config/chatwork
+          printf '%s' "$CHATWORK_TOKEN" > ~/.config/chatwork/token
+          cd src
+          python3 board.py --out "$GITHUB_WORKSPACE/dist" > /dev/null 2>&1 || { echo "failed"; exit 1; }
+      - name: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd dist
+          touch .nojekyll
+          git init -q -b gh-pages
+          git add -A
+          git -c user.name=build -c user.email=build@users.noreply.github.com commit -q -m update
+          git push -q --force "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git" gh-pages
