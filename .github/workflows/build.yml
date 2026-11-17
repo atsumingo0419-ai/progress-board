@@ -29,6 +29,8 @@ jobs:
           CHATWORK_TOKEN: ${{ secrets.CHATWORK_TOKEN }}
           BOARD_PW_ATSUMI: ${{ secrets.BOARD_PW_ATSUMI }}
           BOARD_PW_STAGEON: ${{ secrets.BOARD_PW_STAGEON }}
+          # YouTube の公開日を Data API で読む（GitHub からは「動画」タブのページが読めないため。11/17〜）
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: |
           umask 077
           mkdir -p ~/.config/chatwork
